@@ -177,11 +177,26 @@ fn render_classic(uv: vec2<f32>, mode: i32, cell: f32, t: f32, mouse: vec2<f32>)
         let m = map(p, mode, cell);
         if (m.y > 3.5) {
             col = vec3<f32>(1.0, 0.55, 0.12) * (0.3 * amb + dif) + 0.05;
-        } else if (m.y > 2.5) {                       // планета — освещена ЗВЕЗДОЙ сцены
-            let sc = sceneStarCenter(p, mode, cell);
-            let ld = normalize(sc - p);
-            let pdif = max(dot(n, ld), 0.0);
-            col = vec3<f32>(0.30, 0.55, 0.95) * (0.05 + pdif);
+        } else if (m.y > 2.5) {                       // планета — звезда И её ОБРАЗЫ
+            if (mode == 3) {
+                // T³: свет приходит от звезды и её 26 ближайших образов (3×3×3), ~1/d²
+                let center = p - (modf3(p + 0.5 * cell, cell) - 0.5 * cell);
+                var diff = 0.0;
+                for (var ix = -1; ix <= 1; ix = ix + 1) {
+                    for (var iy = -1; iy <= 1; iy = iy + 1) {
+                        for (var iz = -1; iz <= 1; iz = iz + 1) {
+                            let img = center + cell * vec3<f32>(f32(ix), f32(iy), f32(iz)) + vec3<f32>(-0.9, 0.0, 0.0);
+                            let dv = img - p;
+                            diff = diff + max(dot(n, normalize(dv)), 0.0) / (0.4 + 0.2 * dot(dv, dv));
+                        }
+                    }
+                }
+                col = vec3<f32>(0.30, 0.55, 0.95) * (0.04 + diff);
+            } else {
+                // R³: одна звезда, образов нет
+                let ld = normalize(sceneStarCenter(p, mode, cell) - p);
+                col = vec3<f32>(0.30, 0.55, 0.95) * (0.05 + max(dot(n, ld), 0.0));
+            }
         } else if (m.y > 1.5) {
             col = vec3<f32>(1.0, 0.85, 0.45) * 1.5;
         } else {
