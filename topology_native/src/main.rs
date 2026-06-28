@@ -252,8 +252,14 @@ async fn run() {
                                     "4" => state.mode = 3,
                                     "5" => state.mode = 4,
                                     "6" => state.mode = 5,
-                                    "]" => state.cell = (state.cell + 1.0).min(24.0),
-                                    "[" => state.cell = (state.cell - 1.0).max(4.0),
+                                    "]" => {
+                                        let s = (state.cell * 0.1).round().max(1.0);
+                                        state.cell = (state.cell + s).min(240.0);
+                                    }
+                                    "[" => {
+                                        let s = (state.cell * 0.1).round().max(1.0);
+                                        state.cell = (state.cell - s).max(4.0);
+                                    }
                                     "=" | "+" => state.exposure = (state.exposure * 1.2).min(40.0),
                                     "-" | "_" => state.exposure = (state.exposure / 1.2).max(0.02),
                                     "." | ">" => state.star_lum = (state.star_lum * 1.25).min(60.0),

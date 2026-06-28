@@ -300,8 +300,8 @@ void main(){
   }, { passive: true });
   addEventListener('keydown', e => {
     if (e.key >= '1' && e.key <= '5'){ mode = (+e.key) - 1; mname.textContent = names[mode]; }
-    else if (e.key === ']' || e.key === '+' || e.key === '='){ cell = Math.min(24.0, cell + 1.0); showCell(); }
-    else if (e.key === '[' || e.key === '-' || e.key === '_'){ cell = Math.max(4.0,  cell - 1.0); showCell(); }
+    else if (e.key === ']' || e.key === '+' || e.key === '='){ cell = Math.min(240.0, cell + Math.max(1.0, Math.round(cell * 0.1))); showCell(); }
+    else if (e.key === '[' || e.key === '-' || e.key === '_'){ cell = Math.max(4.0,   cell - Math.max(1.0, Math.round(cell * 0.1))); showCell(); }
     else if (e.code === 'Space'){ paused = !paused; e.preventDefault(); }
   });
 
