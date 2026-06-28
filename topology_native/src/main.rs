@@ -24,6 +24,7 @@ struct State {
     mouse: [f32; 2],
     mode: i32,
     cell: f32,
+    fog_idx: usize,
     exposure: f32,
     star_lum: f32,
     speed: f32,
@@ -43,12 +44,16 @@ const MODE_NAMES: [&str; 6] = [
     "Заторенная вселенная",
 ];
 
+const FOG_VALUES: [f32; 4] = [0.0, 1.0, 4.0, 12.0];
+const FOG_NAMES: [&str; 4] = ["выкл", "слабый", "средний", "сильный"];
+
 fn title(s: &State) -> String {
     format!(
-        "topology_native | режим {}·{} | период L={:.1} | exposure={:.2} | star_lum={:.2}",
+        "topology_native | режим {}·{} | период L={:.1} | туман: {} | exposure={:.2} | star_lum={:.2}",
         s.mode + 1,
         MODE_NAMES[s.mode as usize],
         s.cell,
+        FOG_NAMES[s.fog_idx],
         s.exposure,
         s.star_lum
     )
@@ -184,14 +189,26 @@ async fn run() {
         topo_items.push(it);
     }
     let _ = menu.append(&topo_menu);
+
+    let fog_menu = Submenu::new("Туман", true);
+    let mut fog_items: Vec<CheckMenuItem> = Vec::new();
+    for i in 0..FOG_NAMES.len() {
+        let it = CheckMenuItem::new(FOG_NAMES[i], true, i == 1, None);
+        let _ = fog_menu.append(&it);
+        fog_items.push(it);
+    }
+    let _ = menu.append(&fog_menu);
+
     #[cfg(target_os = "macos")]
     menu.init_for_nsapp();
     let topo_ids: Vec<MenuId> = topo_items.iter().map(|x| x.id().clone()).collect();
+    let fog_ids: Vec<MenuId> = fog_items.iter().map(|x| x.id().clone()).collect();
 
     let mut state = State {
         mouse: [0.0, 0.0],
         mode: 0,
         cell: 8.0,
+        fog_idx: 1,
         exposure: 1.2,
         star_lum: 12.0,
         speed: 1.0,
@@ -214,6 +231,12 @@ async fn run() {
                     state.mode = i as i32;
                     for (j, it) in topo_items.iter().enumerate() {
                         it.set_checked(j as i32 == state.mode);
+                    }
+                    window.set_title(&title(&state));
+                } else if let Some(i) = fog_ids.iter().position(|id| id == &ev.id) {
+                    state.fog_idx = i;
+                    for (j, it) in fog_items.iter().enumerate() {
+                        it.set_checked(j == state.fog_idx);
                     }
                     window.set_title(&title(&state));
                 }
@@ -264,6 +287,9 @@ async fn run() {
                                     "-" | "_" => state.exposure = (state.exposure / 1.2).max(0.02),
                                     "." | ">" => state.star_lum = (state.star_lum * 1.25).min(60.0),
                                     "," | "<" => state.star_lum = (state.star_lum / 1.25).max(0.05),
+                                    "f" | "F" | "а" | "А" => {
+                                        state.fog_idx = (state.fog_idx + 1) % FOG_NAMES.len();
+                                    }
                                     _ => changed = false,
                                 },
                                 Key::Named(NamedKey::Space) => state.paused = !state.paused,
@@ -274,6 +300,9 @@ async fn run() {
                                 window.set_title(&title(&state));
                                 for (j, it) in topo_items.iter().enumerate() {
                                     it.set_checked(j as i32 == state.mode);
+                                }
+                                for (j, it) in fog_items.iter().enumerate() {
+                                    it.set_checked(j == state.fog_idx);
                                 }
                             }
                         }
@@ -289,7 +318,7 @@ async fn run() {
                         let uni = Uniforms {
                             a: [state.width, state.height, state.sim_time, state.cell],
                             b: [state.mouse[0], state.mouse[1], state.exposure, state.star_lum],
-                            c: [state.mode as f32, 0.0, 0.0, 0.0],
+                            c: [state.mode as f32, FOG_VALUES[state.fog_idx], 0.0, 0.0],
                         };
                         queue.write_buffer(&ubo, 0, bytemuck::bytes_of(&uni));
 
@@ -345,5 +374,6 @@ fn print_controls() {
     println!("[ ]   период заворота L");
     println!("- =   экспозиция (режим 6)");
     println!(", .   светимость звезды (режим 6)");
+    println!("F     туман: выкл/слабый/средний/сильный (или меню «Туман»)");
     println!("мышь  осмотр · колесо  скорость · Space  пауза · Esc  выход");
 }

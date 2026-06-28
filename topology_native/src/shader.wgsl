@@ -149,9 +149,9 @@ fn render_classic(uv: vec2<f32>, mode: i32, cell: f32, t: f32, mouse: vec2<f32>)
     let ray = make_ray(uv, mode, cell, t, mouse);
     let ro = ray.o; let rd = ray.d;
 
-    var d = 0.0; let tmax = max(220.0, 6.0 * cell); var glow = 0.0;
+    var d = 0.0; let tmax = max(22000.0, 600.0 * cell); var glow = 0.0;
     var hit = false; var hitSteps = 0; var p = ro;
-    for (var i = 0; i < 192; i = i + 1) {
+    for (var i = 0; i < 384; i = i + 1) {
         p = ro + rd * d;
         let s = map(p, mode, cell);
         if (mode == 3 || mode == 4) {
@@ -207,7 +207,8 @@ fn render_classic(uv: vec2<f32>, mode: i32, cell: f32, t: f32, mouse: vec2<f32>)
         col = col * (1.0 - 0.5 * f32(hitSteps) / 192.0);
     }
     let fogc = vec3<f32>(0.02, 0.03, 0.06);
-    col = mix(fogc, col, exp(-d / max(200.0, 2.0 * cell)));   // характерная дистанция тумана ~ период
+    // плотность тумана u.c.y управляется из меню (0 = выкл); дистанция ~ период
+    col = mix(fogc, col, exp(-d * u.c.y / max(20000.0, 200.0 * cell)));
     col = col + glow * vec3<f32>(1.0, 0.7, 0.35);
     return pow(col, vec3<f32>(0.4545));
 }
@@ -218,11 +219,11 @@ fn render_universe(uv: vec2<f32>, cell: f32, t: f32, mouse: vec2<f32>, exposure:
     let ro = ray.o; let rd = ray.d;
 
     let kAng = 1.6 / H;        // угловой размер ~ пикселя -> ядро не схлопывается
-    let tmax = max(160.0, 6.0 * cell);
+    let tmax = max(16000.0, 600.0 * cell);
     var tt = 0.0;
     var emis = vec3<f32>(0.0);
     var hit = false; var hitP = ro;
-    for (var i = 0; i < 256; i = i + 1) {
+    for (var i = 0; i < 384; i = i + 1) {
         let p = ro + rd * tt;
         let dSolid = planetDist(p, cell);
         let dc = starCenterDist(p, cell);
@@ -249,7 +250,7 @@ fn render_universe(uv: vec2<f32>, cell: f32, t: f32, mouse: vec2<f32>, exposure:
         let recv = starLum / (0.3 + 0.15 * dStar2);          // освещённость планеты её солнцем
         surf = vec3<f32>(0.35, 0.45, 0.55) * (0.04 + dif * recv) * STAR_COL;
         // лёгкий туман по дистанции до планеты
-        surf = surf * exp(-tt / max(100.0, 2.0 * cell));
+        surf = surf * exp(-tt * u.c.y / max(10000.0, 200.0 * cell));
     }
 
     let hdr = surf + emis;

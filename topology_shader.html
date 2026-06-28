@@ -26,6 +26,7 @@
   координата сворачивается в фундаментальную ячейку (fold).<br>
   Режим: <span class="m" id="mname">1 · T³ (трансляции)</span><br>
   Период заворота L: <span class="m" id="cell">6.0</span> &nbsp;(<kbd>[</kbd> / <kbd>]</kbd>) — больше = копии дальше<br>
+  Туман: <span class="m" id="fog">слабый</span> &nbsp;(<kbd>F</kbd> — выкл/слабый/средний/сильный)<br>
   <kbd>1</kbd> T³ &nbsp; <kbd>2</kbd> орбифолд &nbsp; <kbd>3</kbd> скрученный &nbsp; <kbd>4</kbd> звезда+планета (T³) &nbsp; <kbd>5</kbd> обычное R³<br>
   Оранжевая «F» — асимметричная фигура: видно поворот/зеркало топологии.<br>
   Сравни <kbd>4</kbd> (планета повторяется) и <kbd>5</kbd> (R³: планета одна).<br>
@@ -48,6 +49,7 @@ uniform int   iMode;       // 0:T3  1:mirror  2:twisted  3:star+planet(T3)  4:о
 uniform float iCell;       // ПЕРИОД ЗАВОРОТА: через сколько луч "выходит с другой стороны".
                            // Объекты НЕ масштабируются: больше период -> копии дальше друг от друга
                            // (видишь одну планету много раз издалека, а не тесную комнату зеркал).
+uniform float uFog;        // плотность тумана (0 = выключен), управляется клавишей F
 
 // ---------- примитивы SDF ----------
 float sdSphere(vec3 p, float r){ return length(p) - r; }
@@ -175,9 +177,9 @@ void main(){
     vec3 rd  = cam * normalize(vec3(uv, 1.2));
 
     // sphere tracing:  t_{k+1} = t_k + DE(p_k)
-    float d = 0.0, tmax = max(220.0, 6.0 * L), glow = 0.0;          // дальняя граница увеличена
+    float d = 0.0, tmax = max(22000.0, 600.0 * L), glow = 0.0;          // дальняя граница увеличена
     bool hit = false; int hitSteps = 0; vec3 p = ro;
-    for (int i = 0; i < 192; i++){
+    for (int i = 0; i < 320; i++){
         p = ro + rd * d;
         vec2 s = map(p);
         if (iMode == 3 || iMode == 4){
@@ -231,7 +233,7 @@ void main(){
     }
 
     vec3 fogc = vec3(0.02, 0.03, 0.06);
-    col = mix(fogc, col, exp(-d / max(200.0, 2.0 * L)));       // характерная дистанция тумана ~ период
+    col = mix(fogc, col, exp(-d * uFog / max(20000.0, 200.0 * L)));   // uFog: плотность тумана (0=выкл)
     col += glow * vec3(1.0, 0.7, 0.35);                        // свечение звёзд
     col = pow(col, vec3(0.4545));                              // гамма
     gl_FragColor = vec4(col, 1.0);
@@ -279,6 +281,7 @@ void main(){
     mouse: gl.getUniformLocation(prog, 'iMouse'),
     mode:  gl.getUniformLocation(prog, 'iMode'),
     cell:  gl.getUniformLocation(prog, 'iCell'),
+    fog:   gl.getUniformLocation(prog, 'uFog'),
   };
 
   const names = ['1 · T³ (трансляции)', '2 · зеркальный орбифолд',
@@ -286,10 +289,15 @@ void main(){
                  '5 · обычное R³ (без склейки)'];
   const mname = document.getElementById('mname');
   const cname = document.getElementById('cell');
+  const fname = document.getElementById('fog');
   let mouse = [0, 0], mode = 0, speed = 1, paused = false, simTime = 0, last = performance.now();
   let cell = 6.0;
+  const fogLevels = [0.0, 1.0, 4.0, 12.0];
+  const fogNames  = ['выкл', 'слабый', 'средний', 'сильный'];
+  let fogIdx = 1;
   const showCell = () => { if (cname) cname.textContent = cell.toFixed(1); };
-  showCell();
+  const showFog  = () => { if (fname) fname.textContent = fogNames[fogIdx]; };
+  showCell(); showFog();
 
   addEventListener('mousemove', e => {
     mouse[0] =  (e.clientX / innerWidth)  * 2 - 1;
@@ -302,6 +310,7 @@ void main(){
     if (e.key >= '1' && e.key <= '5'){ mode = (+e.key) - 1; mname.textContent = names[mode]; }
     else if (e.key === ']' || e.key === '+' || e.key === '='){ cell = Math.min(240.0, cell + Math.max(1.0, Math.round(cell * 0.1))); showCell(); }
     else if (e.key === '[' || e.key === '-' || e.key === '_'){ cell = Math.max(4.0,   cell - Math.max(1.0, Math.round(cell * 0.1))); showCell(); }
+    else if (e.key === 'f' || e.key === 'F' || e.key === 'а' || e.key === 'А'){ fogIdx = (fogIdx + 1) % fogLevels.length; showFog(); }
     else if (e.code === 'Space'){ paused = !paused; e.preventDefault(); }
   });
 
@@ -321,6 +330,7 @@ void main(){
     gl.uniform2f(U.mouse, mouse[0], mouse[1]);
     gl.uniform1i(U.mode, mode);
     gl.uniform1f(U.cell, cell);
+    gl.uniform1f(U.fog, fogLevels[fogIdx]);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     requestAnimationFrame(frame);
   }
