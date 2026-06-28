@@ -57,10 +57,13 @@ cargo run --release
 bash packaging/package.sh
 ```
 
-Соберёт release-бинарь, упакует в `dist/TopologyNative.app` (ad-hoc подписан) и
-`dist/TopologyNative-<ver>-macos-arm64.zip`. Бандл локальный (`dist/` в .gitignore).
-Так как подпись ad-hoc (без сертификата Apple), при первом запуске Gatekeeper может
-ругаться — открыть через ПКМ → «Открыть».
+Соберёт release-бинарь и упакует в `dist/`:
+- `TopologyNative.app` (ad-hoc подписан),
+- `TopologyNative-<ver>-macos-arm64.zip`,
+- `TopologyNative-<ver>-macos-arm64.dmg` (с симлинком на `/Applications` — drag-install).
+
+Артефакты локальные (`dist/` в .gitignore). Подпись ad-hoc (без сертификата Apple),
+поэтому при первом запуске Gatekeeper может ругаться — открыть через ПКМ → «Открыть».
 
 ## Стек
 
