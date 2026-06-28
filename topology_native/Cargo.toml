@@ -1,0 +1,14 @@
+[package]
+name = "topology_native"
+version = "0.1.0"
+edition = "2021"
+description = "Нативный (Rust + wgpu) raymarcher топологических пространств с оптикой заторенной вселенной"
+
+[dependencies]
+winit = "0.29"
+wgpu = "0.20"
+pollster = "0.3"
+bytemuck = { version = "1", features = ["derive"] }
+
+[profile.release]
+opt-level = 3
