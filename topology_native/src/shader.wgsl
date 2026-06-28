@@ -149,7 +149,7 @@ fn render_classic(uv: vec2<f32>, mode: i32, cell: f32, t: f32, mouse: vec2<f32>)
     let ray = make_ray(uv, mode, cell, t, mouse);
     let ro = ray.o; let rd = ray.d;
 
-    var d = 0.0; let tmax = 220.0; var glow = 0.0;
+    var d = 0.0; let tmax = max(220.0, 6.0 * cell); var glow = 0.0;
     var hit = false; var hitSteps = 0; var p = ro;
     for (var i = 0; i < 192; i = i + 1) {
         p = ro + rd * d;
@@ -207,7 +207,7 @@ fn render_classic(uv: vec2<f32>, mode: i32, cell: f32, t: f32, mouse: vec2<f32>)
         col = col * (1.0 - 0.5 * f32(hitSteps) / 192.0);
     }
     let fogc = vec3<f32>(0.02, 0.03, 0.06);
-    col = mix(fogc, col, exp(-0.005 * d));
+    col = mix(fogc, col, exp(-d / max(200.0, 2.0 * cell)));   // характерная дистанция тумана ~ период
     col = col + glow * vec3<f32>(1.0, 0.7, 0.35);
     return pow(col, vec3<f32>(0.4545));
 }
@@ -218,7 +218,7 @@ fn render_universe(uv: vec2<f32>, cell: f32, t: f32, mouse: vec2<f32>, exposure:
     let ro = ray.o; let rd = ray.d;
 
     let kAng = 1.6 / H;        // угловой размер ~ пикселя -> ядро не схлопывается
-    let tmax = 160.0;
+    let tmax = max(160.0, 6.0 * cell);
     var tt = 0.0;
     var emis = vec3<f32>(0.0);
     var hit = false; var hitP = ro;
@@ -249,7 +249,7 @@ fn render_universe(uv: vec2<f32>, cell: f32, t: f32, mouse: vec2<f32>, exposure:
         let recv = starLum / (0.3 + 0.15 * dStar2);          // освещённость планеты её солнцем
         surf = vec3<f32>(0.35, 0.45, 0.55) * (0.04 + dif * recv) * STAR_COL;
         // лёгкий туман по дистанции до планеты
-        surf = surf * exp(-0.01 * tt);
+        surf = surf * exp(-tt / max(100.0, 2.0 * cell));
     }
 
     let hdr = surf + emis;
