@@ -115,6 +115,13 @@ fn planetNormal(p: vec3<f32>, cell: f32) -> vec3<f32> {
         planetDist(p + e.yyx, cell) - planetDist(p - e.yyx, cell)));
 }
 
+// положение ближайшей звезды СЦЕНЫ для освещения планеты (режимы 3 и 4)
+fn sceneStarCenter(p: vec3<f32>, mode: i32, cell: f32) -> vec3<f32> {
+    if (mode == 4) { return vec3<f32>(0.0, 0.0, 0.0); }   // R³: звезда в начале координат
+    let q = modf3(p + 0.5 * cell, cell) - 0.5 * cell;     // T³: звезда (-0.9,0,0) в каждой ячейке
+    return p - (q - vec3<f32>(-0.9, 0.0, 0.0));
+}
+
 struct Ray { o: vec3<f32>, d: vec3<f32> };
 fn make_ray(uv: vec2<f32>, mode: i32, cell: f32, t: f32, mouse: vec2<f32>) -> Ray {
     var ro: vec3<f32>;
@@ -170,8 +177,11 @@ fn render_classic(uv: vec2<f32>, mode: i32, cell: f32, t: f32, mouse: vec2<f32>)
         let m = map(p, mode, cell);
         if (m.y > 3.5) {
             col = vec3<f32>(1.0, 0.55, 0.12) * (0.3 * amb + dif) + 0.05;
-        } else if (m.y > 2.5) {
-            col = vec3<f32>(0.30, 0.55, 0.95) * (0.25 * amb + dif);
+        } else if (m.y > 2.5) {                       // планета — освещена ЗВЕЗДОЙ сцены
+            let sc = sceneStarCenter(p, mode, cell);
+            let ld = normalize(sc - p);
+            let pdif = max(dot(n, ld), 0.0);
+            col = vec3<f32>(0.30, 0.55, 0.95) * (0.05 + pdif);
         } else if (m.y > 1.5) {
             col = vec3<f32>(1.0, 0.85, 0.45) * 1.5;
         } else {

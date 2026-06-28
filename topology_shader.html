@@ -90,6 +90,14 @@ vec3 foldP(vec3 p){
     return mod(p + HALF, L) - HALF;
 }
 
+// положение ближайшей звезды СЦЕНЫ (для освещения планеты в режимах 3 и 4)
+vec3 sceneStarCenter(vec3 p){
+    float L = iCell, HALF = 0.5 * iCell;
+    if (iMode == 4) return vec3(0.0);                 // R³: звезда в начале координат
+    vec3 q = mod(p + HALF, L) - HALF;                 // T³: звезда (-0.9,0,0) в каждой ячейке
+    return p - (q - vec3(-0.9, 0.0, 0.0));
+}
+
 // только звёзды (для свечения-ореолов в режиме 3)
 float sdStarsOnly(vec3 p){
     if (iMode == 4) return sdSphere(p - vec3(0.0, 0.0, 0.0), 1.20);  // одна звезда в R³
@@ -192,8 +200,10 @@ void main(){
         vec2 m = map(p);
         if (m.y > 3.5){                                        // асимметричная «F»
             col = vec3(1.0, 0.55, 0.12) * (0.3 * amb + dif) + 0.05;
-        } else if (m.y > 2.5){                                 // планета
-            col = vec3(0.30, 0.55, 0.95) * (0.25 * amb + dif);
+        } else if (m.y > 2.5){                                 // планета — освещена ЗВЕЗДОЙ сцены
+            vec3 ld = normalize(sceneStarCenter(p) - p);
+            float pdif = max(dot(n, ld), 0.0);
+            col = vec3(0.30, 0.55, 0.95) * (0.05 + pdif);
         } else if (m.y > 1.5){                                 // звезда: эмиссия
             col = vec3(1.0, 0.85, 0.45) * 1.5;
         } else {                                               // решётка
