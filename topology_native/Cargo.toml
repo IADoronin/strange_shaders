@@ -9,6 +9,7 @@ winit = "0.29"
 wgpu = "0.20"
 pollster = "0.3"
 bytemuck = { version = "1", features = ["derive"] }
+muda = "0.13"
 
 [profile.release]
 opt-level = 3

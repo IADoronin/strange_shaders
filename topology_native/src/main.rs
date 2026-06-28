@@ -3,6 +3,7 @@
 // вся логика — во фрагментном WGSL-шейдере (src/shader.wgsl).
 use std::sync::Arc;
 use std::time::Instant;
+use muda::{CheckMenuItem, Menu, MenuEvent, MenuId, PredefinedMenuItem, Submenu};
 use winit::{
     dpi::LogicalSize,
     event::{ElementState, Event, MouseScrollDelta, WindowEvent},
@@ -34,12 +35,18 @@ struct State {
 }
 
 const MODE_NAMES: [&str; 6] = [
-    "1 T3", "2 mirror-orbifold", "3 star+planet(T3)", "4 R3", "5 R3", "6 torus-universe",
+    "T³ (тор)",
+    "Зеркальный орбифолд",
+    "Скрученный T³",
+    "Звезда+планета (T³)",
+    "Обычное R³",
+    "Заторенная вселенная",
 ];
 
 fn title(s: &State) -> String {
     format!(
-        "topology_native | режим {} | период L={:.1} | exposure={:.2} | star_lum={:.2}",
+        "topology_native | режим {}·{} | период L={:.1} | exposure={:.2} | star_lum={:.2}",
+        s.mode + 1,
         MODE_NAMES[s.mode as usize],
         s.cell,
         s.exposure,
@@ -158,6 +165,29 @@ async fn run() {
         multiview: None,
     });
 
+    // --- меню (нативная строка меню macOS) с выбором топологии ---
+    let menu = Menu::new();
+    #[cfg(target_os = "macos")]
+    {
+        let app_menu = Submenu::new("Topology Native", true);
+        let _ = app_menu.append(&PredefinedMenuItem::about(Some("Topology Native"), None));
+        let _ = app_menu.append(&PredefinedMenuItem::separator());
+        let _ = app_menu.append(&PredefinedMenuItem::quit(None));
+        let _ = menu.append(&app_menu);
+    }
+    let topo_menu = Submenu::new("Топология", true);
+    let mut topo_items: Vec<CheckMenuItem> = Vec::new();
+    for i in 0..6usize {
+        let label = format!("{} · {}", i + 1, MODE_NAMES[i]);
+        let it = CheckMenuItem::new(label, true, i == 0, None);
+        let _ = topo_menu.append(&it);
+        topo_items.push(it);
+    }
+    let _ = menu.append(&topo_menu);
+    #[cfg(target_os = "macos")]
+    menu.init_for_nsapp();
+    let topo_ids: Vec<MenuId> = topo_items.iter().map(|x| x.id().clone()).collect();
+
     let mut state = State {
         mouse: [0.0, 0.0],
         mode: 0,
@@ -177,6 +207,18 @@ async fn run() {
     event_loop
         .run(move |event, elwt| {
             elwt.set_control_flow(ControlFlow::Poll);
+
+            // клики по меню «Топология»
+            while let Ok(ev) = MenuEvent::receiver().try_recv() {
+                if let Some(i) = topo_ids.iter().position(|id| id == &ev.id) {
+                    state.mode = i as i32;
+                    for (j, it) in topo_items.iter().enumerate() {
+                        it.set_checked(j as i32 == state.mode);
+                    }
+                    window.set_title(&title(&state));
+                }
+            }
+
             match event {
                 Event::WindowEvent { event, .. } => match event {
                     WindowEvent::CloseRequested => elwt.exit(),
@@ -224,6 +266,9 @@ async fn run() {
                             }
                             if changed {
                                 window.set_title(&title(&state));
+                                for (j, it) in topo_items.iter().enumerate() {
+                                    it.set_checked(j as i32 == state.mode);
+                                }
                             }
                         }
                     }
